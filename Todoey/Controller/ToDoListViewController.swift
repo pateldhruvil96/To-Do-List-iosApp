@@ -113,7 +113,7 @@ class ToDoListViewController: UITableViewController {
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
     }
-    func saveItems(){
+    func saveItems(){ //this is done to insert the data
         let encoder=PropertyListEncoder()
             do{
         let data = try encoder.encode(itemArray)//this will encode ie make item array into plist(propertList)
@@ -125,7 +125,7 @@ class ToDoListViewController: UITableViewController {
         
             tableView.reloadData()
     }
-    func loadItems()
+    func loadItems() //this is done to take out data
     {
         if let data=try? Data(contentsOf: dataFilePath!)
         {

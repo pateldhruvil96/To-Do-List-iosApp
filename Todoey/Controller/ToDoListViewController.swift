@@ -156,7 +156,7 @@ extension ToDoListViewController:UISearchBarDelegate
 
 //        else
 //        {
-//            searchBarSearchButtonClicked(searchBar) //this is used for live searching
+//            searchBarSearchButtonClicked(searchBar) //this is used for live searchingg
 //        }
 
     }

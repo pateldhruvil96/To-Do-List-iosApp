@@ -1,6 +1,8 @@
 
 import UIKit
 import RealmSwift
+import SwipeCellKit
+import ChameleonFramework
 
 class ToDoListViewController: UITableViewController {
    // let currentDateTime = Date()
@@ -11,6 +13,8 @@ class ToDoListViewController: UITableViewController {
     //this is will create your own datafile plist named Item.plist
     
     let realm = try! Realm()
+    
+    @IBOutlet weak var searchBar: UISearchBar!
     
     var selectedCategory:Category?
     {
@@ -25,43 +29,46 @@ class ToDoListViewController: UITableViewController {
        
         super.viewDidLoad()
         //print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
+         tableView.rowHeight=80
+        
+
+    }
+    override func viewWillAppear(_ animated: Bool) { //this is called after viewdid load and just before users sees the screen .We have to create this as below code wont work in view didload as navigationl bar is not created yet at viewdidload so after viewdidload is created after which navigationbar is created after all this we will call below code
+        
+        navigationController?.navigationBar.backgroundColor=UIColor(hexString: selectedCategory!.colorr) //this make the navigational bar to the same as the category selected
+        navigationController?.navigationBar.tintColor=ContrastColorOf((navigationController?.navigationBar.backgroundColor)!, returnFlat: true) //this makes backbutton contrast with current background colour(same as 59 line)
+        navigationController?.navigationBar.largeTitleTextAttributes=[NSAttributedString.Key.foregroundColor:ContrastColorOf((navigationController?.navigationBar.backgroundColor)!, returnFlat: true)] //this is done for Title text in navigation bar ie Home,Work etc in todolist page
         
         
-      // loadItems()
+        title=selectedCategory?.name //this is done so that it will show name of the selected category
+        searchBar.barTintColor=UIColor(hexString: selectedCategory!.colorr) //makes searchbar same color as list items
+        searchBar.searchTextField.backgroundColor=FlatWhite() //this is to make searchbar text field white
         
-        
-        //print(dataFilePath)
-//        let newItem=Item()
-//        newItem.title="kem cho"
-//        itemArray.append(newItem)
-//
-//        let newItem1=Item()
-//        newItem1.title="supp"
-//        itemArray.append(newItem1)
-//
-//        let newItem2=Item()
-//        newItem2.title="hola"
-//        itemArray.append(newItem2)
-//
-//        let newItem3=Item()
-//        newItem3.title="all good"
-        
-//       if let items = defaults.array(forKey: "ToDoListArray") as? [Item]        { //this should not be used since we can only store array,int and small values in "defaults" but we are storing an array of objects which will show error when we add any new item error:"Attempt to set non-property list object"
-//           itemArray = items
-//       }
-        // Do any additional setup after loading the view.
     }
     //MARK:- TableView Data Source Methods
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return todoItems?.count ?? 1
     }
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell=tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+        let cell=tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath) as! SwipeTableViewCell
         
        if let item=todoItems?[indexPath.row]
        {
         cell.textLabel?.text=item.title
+        
+        if let coloour=UIColor(hexString: selectedCategory!.colorr)?.darken(byPercentage: //this is used to get gradient colors at each row ,here "?" means "optionally chain" means if not nill then proced further
+            CGFloat(indexPath.row)*0.8/CGFloat(todoItems!.count)) //note that if we write this Cgfloat(indexPath.row/todoItems!.count) then it wil show error as whole no by whole no will give whle no as output .But if ie 1/10 it should give float value so we have written this way
+            {
+                cell.backgroundColor=coloour
+                cell.textLabel?.textColor=ContrastColorOf(coloour, returnFlat: true) //this will change the text colour depending on the background color of row means if background color of row is dark it makes text white in colour
+            }
+        
+        
+        
+        
         cell.accessoryType = item.done ? .checkmark:.none
+        cell.delegate = self
+        
         }
         else
        {
@@ -126,7 +133,7 @@ class ToDoListViewController: UITableViewController {
     //MARK:- Model Manipulation Methods
 
     func loadItems(){
-        todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true) //means it will select all the items in the selectedCategory and will show in ascending order
+        todoItems = selectedCategory?.items.sorted(byKeyPath: "dateCreated", ascending: true) //means it will select all the items in the selectedCategory and will show in ascending order
         tableView.reloadData()
 
     }
@@ -163,6 +170,46 @@ extension ToDoListViewController:UISearchBarDelegate
 
 }
 
+//MARK:- SWIPE Cell Delegate Methods
+//Below func is used to delete a row my swipping little bit to left and then clicking to delete icon to delete thatrow
+extension ToDoListViewController:SwipeTableViewCellDelegate
+{
+   func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> [SwipeAction]? {
+        guard orientation == .right else { return nil }
+
+        let deleteAction = SwipeAction(style: .destructive, title: "Delete") { action, indexPath in
+            // handle action by updating model with deletion
+            //print("Item deleted")
+            if let todolistDeletion=self.todoItems?[indexPath.row] //this is done since categoryarray is optional so this will check if "self.categoryArray?[indexPath.row]" is not nill then it is named as "categoryDeletion"
+            {
+                do{
+                    try self.realm.write{
+                self.realm.delete(todolistDeletion)
+                        }
+                }
+                catch{
+                    print("Error:\(error)")
+                }
+            }
+           // tableView.reloadData() we have commented out since if we are using below function then The built-in .destructive, and .destructiveAfterFill expansion styles are configured to automatically perform row deletion when the action handler is invoked (automatic fulfillment)." So there is no use of reloade the data as it is automatically done by below fuction.But if we are not using below func then we have to write this reload line.
+        }
+
+        // customize the action appearance
+        deleteAction.image = UIImage(named: "delete-icon")
+
+        return [deleteAction]
+    }
+
+    //Below func is used to delete whole row my simply swipping whole right to left
+    func tableView(_ tableView: UITableView, editActionsOptionsForRowAt indexPath: IndexPath, for orientation: SwipeActionsOrientation) -> SwipeOptions {
+        var options = SwipeOptions()
+        options.expansionStyle = .destructive
+//        options.transitionStyle = .border
+        return options
+    }
+
+
+}
 
 
 
